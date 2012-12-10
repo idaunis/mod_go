@@ -117,8 +117,8 @@ static int exec_go_app(request_rec *r, char * command)
         // Error
         return rv;
     } else {
-        apr_file_pipe_timeout_set(proc.out,r->server->timeout);
         apr_file_pipe_timeout_set(proc.in,r->server->timeout);
+        apr_file_pipe_timeout_set(proc.out,r->server->timeout);
         apr_file_pipe_timeout_set(proc.err,r->server->timeout);
     }
 
@@ -132,12 +132,15 @@ static int exec_go_app(request_rec *r, char * command)
             apr_file_write(proc.in, argsbuffer, &nbytes);
         }
     }
+    apr_file_flush(proc.in);
     apr_file_close(proc.in);
 
     /* read from Go error pipe and send it to apache */
+    nbytes = HUGE_STRING_LEN;
     while( (rv = apr_file_read(proc.err, argsbuffer, &nbytes )) == APR_SUCCESS ) {
         ap_rwrite( argsbuffer, nbytes, r);
     }
+    apr_file_close(proc.err);
 
     /* read from Go app out pipe and send it to apache */
     char *rbuf = (char *) malloc(HUGE_STRING_LEN);
@@ -170,11 +173,6 @@ static int exec_go_app(request_rec *r, char * command)
 
     free(rbuf);
 
-    {
-        int st;
-        apr_exit_why_e why;
-        rv = apr_proc_wait(&proc, &st, &why, APR_WAIT);
-    }
     return OK;
 }
 
