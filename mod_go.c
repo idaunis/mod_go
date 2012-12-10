@@ -107,7 +107,6 @@ static int exec_go_app(request_rec *r, char * command)
     /* set the process properties */
     rv = apr_procattr_create(&pattr, server_pool);
     rv = apr_procattr_io_set(pattr, APR_CHILD_BLOCK, APR_CHILD_BLOCK, APR_CHILD_BLOCK);
-    //rv = apr_procattr_io_set(pattr, APR_FULL_BLOCK, APR_FULL_BLOCK, APR_NO_PIPE);
     rv = apr_procattr_cmdtype_set(pattr, APR_PROGRAM_PATH);
 
     /* run the process */
