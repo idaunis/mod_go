@@ -182,6 +182,7 @@ static int exec_go_app(request_rec *r, char * command)
 static int go_handler(request_rec *r)
 {
     size_t len, i;
+    bool error = false;
     char *path, *name, exec[1024];
 
     if ( strcmp(r->handler, "golang") ) {
@@ -198,18 +199,18 @@ static int go_handler(request_rec *r)
    
     struct stat st1, st2;
     stat(path, &st1);
-    stat(exec, &st2);      
-   
-    bool error = false;
-    char *buf = NULL;
-    buf = malloc( 1025 );
 
-    if( st1.st_mtime > st2.st_mtime ) {
-	    FILE * fp;
-	    char * command = malloc( 1024 );
+    if( stat(exec, &st2) == -1 || st1.st_mtime > st2.st_mtime ) {
+        FILE * fp = NULL;
+        char * temp, *command = NULL;
 	    char * gd = "/etc/modgo/gd";
 
-    	sprintf( command, "%s -o %s -L /etc/modgo/.temp/ %s", gd, exec, path );
+	    command = malloc( 1024 );
+	    temp = malloc( 1025 );
+
+	    sprintf( temp, "/etc/modgo/.temp/%s", get_name(path) );
+    	sprintf( command, "%s -o %s -L %s %s", gd, exec, temp, path );
+    	mkdir( temp, 0777 );
 
     	if( NULL == (fp = popen( command, "r")) ) {
     		ap_rputs("Error!\n", r);
@@ -219,15 +220,15 @@ static int go_handler(request_rec *r)
         const char *br = "<br />";
         len = 0;
         int total = 0;
-        while(fgets(buf, 1024, fp) != NULL) {
-	        strcat( buf, br );
-		    len = strlen( buf );
+        while(fgets(temp, 1024, fp) != NULL) {
+	        strcat( temp, br );
+		    len = strlen( temp );
 		    if( out == NULL ) {
 			    out = malloc( total + len + 1 );
 		    } else {
     			out = realloc( out, total + len + 1 );
     		}
-    		memcpy( out+total, buf, len );
+    		memcpy( out+total, temp, len );
     		total += len;
     	}
         if( pclose(fp) != 0 ) {
@@ -235,6 +236,7 @@ static int go_handler(request_rec *r)
             ap_rwrite(out, total, r);
         }
     	free( command );
+    	free( temp );
 	    if( out != NULL ) free( out );
     }
 
@@ -255,8 +257,6 @@ static int go_handler(request_rec *r)
 
 	    exec_go_app(r, exec);
     }
-
-    free( buf );
 
     return OK;
 }
