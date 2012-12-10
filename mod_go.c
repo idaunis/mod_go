@@ -258,7 +258,7 @@ static int go_handler(request_rec *r)
 	    exec_go_app(r, exec);
     }
 
-    return OK;
+    return DONE;
 }
 
 static void mod_go_register_hooks(apr_pool_t *p)
